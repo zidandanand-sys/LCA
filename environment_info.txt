@@ -1,0 +1,236 @@
+"""
+================================================================================
+Judul   : Analisis LCA Sederhana - Perbandingan Dampak Lingkungan Kemasan
+          Minuman (Botol PET vs Botol Kaca vs Kaleng Aluminium)
+Penulis : [Isi nama Anda]
+Tanggal : [Isi tanggal]
+
+Tujuan  : (1) Menghitung total dampak lingkungan (GWP, penggunaan energi,
+              penggunaan air) untuk memproduksi 1 kemasan per 1 liter minuman
+              (unit fungsional = 1 liter minuman terkemas)
+          (2) Mengidentifikasi tahap siklus hidup (ekstraksi bahan baku,
+              produksi, transportasi, pengolahan akhir) yang memberi kontribusi
+              dampak terbesar untuk tiap jenis kemasan
+          (3) Membuat skor komposit sederhana (equal-weighted, hasil
+              normalisasi min-max antar kategori dampak) untuk merangking
+              kemasan mana yang paling ramah lingkungan secara keseluruhan
+
+Metode  : Life Cycle Assessment (LCA) sederhana, mengikuti kerangka umum:
+              Tujuan & Ruang Lingkup -> Inventarisasi (LCI) -> Penilaian
+              Dampak (LCIA) -> Interpretasi
+          Data LCI yang digunakan bersifat ILUSTRATIF (nilai representatif
+          dari kisaran literatur LCA kemasan minuman) - BUKAN data hasil
+          pengukuran primer. Untuk riset/skripsi/tesis sesungguhnya, ganti
+          data ini dengan data dari database LCI standar (ecoinvent, GaBi)
+          atau pengukuran primer di lapangan.
+
+Prasyarat:
+    - Python >= 3.10
+    - Paket: pandas, matplotlib, numpy (lihat requirements.txt)
+
+Cara menjalankan:
+    python analisis_lca_kemasan.py
+
+Catatan reproducibility:
+    - Semua path bersifat relatif terhadap folder proyek (tidak ada path
+      absolut seperti C:/Users/...).
+    - Tidak ada komponen acak dalam analisis ini -> hasil selalu identik
+      di setiap mesin, selama data input (data/data_lca_kemasan.csv) sama.
+    - Seed tetap disertakan sebagai praktik baik jika di kemudian hari
+      analisis dikembangkan dengan simulasi Monte Carlo (mis. analisis
+      ketidakpastian LCA).
+================================================================================
+"""
+
+import os
+import platform
+import sys
+
+import numpy as np
+import pandas as pd
+import matplotlib
+matplotlib.use("Agg")  # agar bisa jalan tanpa display (headless)
+import matplotlib.pyplot as plt
+
+RNG_SEED = 123
+np.random.seed(RNG_SEED)
+
+DATA_PATH = os.path.join("data", "data_lca_kemasan.csv")
+OUTPUT_DIR = "output"
+KATEGORI_DAMPAK = ["GWP_kgCO2e", "Energi_MJ", "Air_L"]
+LABEL_KATEGORI = {
+    "GWP_kgCO2e": "Potensi Pemanasan Global (kg CO2-eq)",
+    "Energi_MJ": "Penggunaan Energi (MJ)",
+    "Air_L": "Penggunaan Air (L)",
+}
+
+
+def siapkan_folder_output():
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+
+
+def muat_data():
+    df = pd.read_csv(DATA_PATH)
+    return df
+
+
+def hitung_total_per_material(df):
+    total = (
+        df.groupby("material")[KATEGORI_DAMPAK]
+        .sum()
+        .reset_index()
+        .sort_values("GWP_kgCO2e")
+    )
+    return total
+
+
+def hitung_kontribusi_tahap(df):
+    total_per_material = df.groupby("material")[KATEGORI_DAMPAK].transform("sum")
+    kontribusi = df.copy()
+    for kat in KATEGORI_DAMPAK:
+        kontribusi[f"{kat}_persen"] = (df[kat] / total_per_material[kat]) * 100
+    return kontribusi
+
+
+def hitung_skor_komposit(total_per_material):
+    """
+    Normalisasi min-max tiap kategori dampak (0 = terbaik/terendah,
+    1 = terburuk/tertinggi), lalu jumlahkan dengan bobot setara (equal
+    weighting) menjadi satu skor komposit sederhana.
+    Skor lebih RENDAH = lebih ramah lingkungan.
+    """
+    df = total_per_material.set_index("material").copy()
+    df_norm = pd.DataFrame(index=df.index)
+    for kat in KATEGORI_DAMPAK:
+        rentang = df[kat].max() - df[kat].min()
+        df_norm[kat] = (df[kat] - df[kat].min()) / rentang if rentang != 0 else 0.0
+    df_norm["skor_komposit"] = df_norm[KATEGORI_DAMPAK].mean(axis=1)
+    df_norm = df_norm.sort_values("skor_komposit").reset_index()
+    df_norm["peringkat"] = np.arange(1, len(df_norm) + 1)
+    return df_norm
+
+
+def gambar_kontribusi_tahap(kontribusi, kategori="GWP_kgCO2e"):
+    pivot = kontribusi.pivot_table(
+        index="material", columns="tahap", values=kategori, aggfunc="sum"
+    )
+    urutan_tahap = [
+        "Ekstraksi Bahan Baku",
+        "Produksi/Manufaktur",
+        "Transportasi",
+        "Pengolahan Akhir (EoL)",
+    ]
+    pivot = pivot[urutan_tahap]
+
+    fig, ax = plt.subplots(figsize=(8, 5.5))
+    pivot.plot(kind="bar", stacked=True, ax=ax, colormap="tab20c")
+    ax.axhline(0, color="black", linewidth=0.8)
+    ax.set_ylabel(LABEL_KATEGORI[kategori])
+    ax.set_xlabel("Jenis Kemasan")
+    ax.set_title(
+        f"Kontribusi Tahap Siklus Hidup terhadap {LABEL_KATEGORI[kategori]}\n"
+        "(per 1 liter minuman terkemas)"
+    )
+    plt.xticks(rotation=0)
+    ax.legend(title="Tahap Siklus Hidup", bbox_to_anchor=(1.02, 1), loc="upper left")
+    fig.tight_layout()
+    fig.savefig(
+        os.path.join(OUTPUT_DIR, "gambar_1_kontribusi_tahap_GWP.png"), dpi=300
+    )
+    plt.close(fig)
+
+
+def gambar_perbandingan_total(total_per_material):
+    fig, axes = plt.subplots(1, 3, figsize=(13, 4.5))
+    warna = ["#4C72B0", "#55A868", "#C44E52"]
+    for ax, kat in zip(axes, KATEGORI_DAMPAK):
+        data = total_per_material.sort_values(kat)
+        ax.bar(data["material"], data[kat], color=warna)
+        ax.set_title(LABEL_KATEGORI[kat], fontsize=10)
+        ax.axhline(0, color="black", linewidth=0.6)
+        ax.tick_params(axis="x", rotation=15)
+    fig.suptitle(
+        "Total Dampak Lingkungan per Jenis Kemasan (per 1 liter minuman)"
+    )
+    fig.tight_layout()
+    fig.savefig(
+        os.path.join(OUTPUT_DIR, "gambar_2_perbandingan_total_dampak.png"), dpi=300
+    )
+    plt.close(fig)
+
+
+def gambar_skor_komposit(skor):
+    fig, ax = plt.subplots(figsize=(7, 4.5))
+    warna = ["#2ca02c" if p == 1 else "#7f7f7f" for p in skor["peringkat"]]
+    ax.bar(skor["material"], skor["skor_komposit"], color=warna)
+    for i, row in skor.iterrows():
+        ax.text(
+            i, row["skor_komposit"] + 0.01, f"Peringkat {row['peringkat']}",
+            ha="center", fontsize=9,
+        )
+    ax.set_ylabel("Skor Komposit (0 = terbaik, 1 = terburuk)")
+    ax.set_title(
+        "Skor Komposit Sederhana LCA\n(rata-rata normalisasi GWP, Energi, Air - bobot setara)"
+    )
+    fig.tight_layout()
+    fig.savefig(os.path.join(OUTPUT_DIR, "gambar_3_skor_komposit.png"), dpi=300)
+    plt.close(fig)
+
+
+def tulis_environment_info():
+    info = [
+        f"Python version : {sys.version}",
+        f"Platform       : {platform.platform()}",
+        f"pandas         : {pd.__version__}",
+        f"numpy          : {np.__version__}",
+        f"matplotlib     : {matplotlib.__version__}",
+    ]
+    with open("environment_info.txt", "w") as f:
+        f.write("\n".join(info) + "\n")
+
+
+def main():
+    siapkan_folder_output()
+    df = muat_data()
+
+    total_per_material = hitung_total_per_material(df)
+    kontribusi = hitung_kontribusi_tahap(df)
+    skor = hitung_skor_komposit(total_per_material)
+
+    print("\n=== Total Dampak Lingkungan per 1 Liter Minuman Terkemas ===")
+    print(total_per_material.to_string(index=False))
+
+    print("\n=== Kontribusi Tahap Siklus Hidup (% dari total tiap kategori) ===")
+    kolom_persen = ["material", "tahap"] + [f"{k}_persen" for k in KATEGORI_DAMPAK]
+    print(kontribusi[kolom_persen].round(1).to_string(index=False))
+
+    print("\n=== Skor Komposit & Peringkat (semakin rendah semakin baik) ===")
+    print(skor.round(3).to_string(index=False))
+
+    # Simpan tabel hasil
+    total_per_material.to_csv(
+        os.path.join(OUTPUT_DIR, "total_dampak_per_material.csv"), index=False
+    )
+    kontribusi.to_csv(
+        os.path.join(OUTPUT_DIR, "kontribusi_tahap_siklus_hidup.csv"), index=False
+    )
+    skor.to_csv(
+        os.path.join(OUTPUT_DIR, "skor_komposit_dan_peringkat.csv"), index=False
+    )
+
+    # Simpan gambar
+    gambar_kontribusi_tahap(kontribusi, kategori="GWP_kgCO2e")
+    gambar_perbandingan_total(total_per_material)
+    gambar_skor_komposit(skor)
+
+    # Catat environment untuk reproducibility
+    tulis_environment_info()
+
+    print(
+        "\nSelesai. Tabel CSV, 3 gambar PNG, dan environment_info.txt telah "
+        "disimpan di folder 'output/' (environment_info.txt di folder utama)."
+    )
+
+
+if __name__ == "__main__":
+    main()

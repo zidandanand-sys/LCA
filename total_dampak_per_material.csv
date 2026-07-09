@@ -1,0 +1,13 @@
+material,tahap,GWP_kgCO2e,Energi_MJ,Air_L
+Botol PET,Ekstraksi Bahan Baku,0.85,25,3.0
+Botol PET,Produksi/Manufaktur,0.55,18,5.0
+Botol PET,Transportasi,0.12,2,0.1
+Botol PET,Pengolahan Akhir (EoL),0.10,1.5,0.2
+Botol Kaca,Ekstraksi Bahan Baku,0.30,8,1.0
+Botol Kaca,Produksi/Manufaktur,1.10,35,6.0
+Botol Kaca,Transportasi,0.35,5,0.2
+Botol Kaca,Pengolahan Akhir (EoL),0.05,1,0.3
+Kaleng Aluminium,Ekstraksi Bahan Baku,1.60,55,4.0
+Kaleng Aluminium,Produksi/Manufaktur,0.40,10,2.0
+Kaleng Aluminium,Transportasi,0.08,1.5,0.05
+Kaleng Aluminium,Pengolahan Akhir (EoL),-0.20,-5,0.1

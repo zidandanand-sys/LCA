@@ -1,21 +1,42 @@
-MIT License
+# Lisensi & Sumber Data
 
-Copyright (c) 2026 zidandanand-sys
+Data pada `data/data_lca_kemasan.csv` bersifat **ilustratif/pedagogis** —
+disusun berdasarkan kisaran nilai yang umum dikutip dalam literatur LCA
+kemasan minuman (bukan hasil pengukuran primer atau ekstraksi langsung dari
+database LCI berbayar seperti ecoinvent/GaBi, yang memerlukan lisensi
+komersial).
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+## Mengapa data ilustratif digunakan?
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+Database LCI resmi (ecoinvent, GaBi) memerlukan lisensi berbayar dan tidak
+dapat didistribusikan ulang secara bebas — ini bertentangan dengan prinsip
+**data tersedia (Findable & Accessible)** dalam reproducible research. Untuk
+tugas kuliah ini, data ilustratif digunakan agar:
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+1. Siapa pun dapat menjalankan ulang analisis tanpa memerlukan akses
+   berbayar.
+2. Fokus tugas tetap pada **metodologi dan reproducibility**, bukan pada
+   keakuratan data LCI itu sendiri.
+
+**Untuk penelitian sesungguhnya (skripsi/tesis/publikasi), gunakan data LCI
+dari sumber yang tervalidasi**, misalnya:
+
+- ecoinvent (ecoinvent.org) — database LCI komersial, standar industri.
+- GaBi (sphera.com) — database LCI komersial.
+- Data sekunder dari studi LCA terpublikasi (dengan sitasi yang jelas).
+- Pengukuran/pengumpulan data primer dari fasilitas produksi terkait.
+
+## Lisensi data pada repositori ini
+
+Data ilustratif ini dilisensikan di bawah **CC-BY 4.0** — bebas digunakan,
+disalin, dan dimodifikasi untuk tujuan pendidikan/penelitian, dengan
+mencantumkan atribusi ke repositori ini.
+
+## Referensi metodologis
+
+- International Organization for Standardization. (2006). *ISO 14040:
+  Environmental management — Life cycle assessment — Principles and
+  framework*.
+- International Organization for Standardization. (2006). *ISO 14044:
+  Environmental management — Life cycle assessment — Requirements and
+  guidelines*.
